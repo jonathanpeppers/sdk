@@ -14,6 +14,7 @@ using FluentAssertions;
 using System.Runtime.InteropServices;
 using System.Linq;
 using Xunit.Abstractions;
+using System.Xml.Linq;
 
 namespace Microsoft.NET.Build.Tests
 {
@@ -130,6 +131,52 @@ namespace Microsoft.NET.Build.Tests
             {
                 result.Should().Fail()
                     .And.HaveStdOutContaining("It cannot be referenced by a project that targets");
+            }
+        }
+
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void It_copies_appsettings_json_correctly(bool enableConflictingContentCopying)
+        {
+            var referencerName = "UnitTestProject1";
+            var dependencyName = "WebApplication1";
+            var testAsset = _testAssetsManager.CopyTestAsset("CopyReferencingAppSettings").WithSource();
+            if (enableConflictingContentCopying)
+            {
+                testAsset = testAsset.WithProjectChanges(project =>
+                {
+                    var ns = project.Root.Name.Namespace;
+                    var propertyGroup = new XElement(ns + "PropertyGroup");
+                    project.Root.Add(propertyGroup);
+                    propertyGroup.Add(new XElement(ns + "CopyConflictingTransitiveContent", "true"));
+                });
+            }
+
+            var buildCommand = new BuildCommand(Log, Path.Combine(testAsset.TestRoot, referencerName));
+            buildCommand.Execute()
+                .Should()
+                .Pass();
+            // Build again to recreate copying issue
+            buildCommand = new BuildCommand(Log, Path.Combine(testAsset.TestRoot, dependencyName + ".sln"));
+            buildCommand.Execute()
+                .Should()
+                .Pass();
+
+            var outputPath = Path.Combine(testAsset.TestRoot, referencerName, "bin", "Debug", "netcoreapp3.0");
+            var appSettingsFile = Path.Combine(outputPath, "appsettings.json");
+            File.Exists(appSettingsFile).Should().BeTrue();
+            var releaseAppSettingsFile = Path.Combine(outputPath, "appsettings.release.json");
+            File.Exists(releaseAppSettingsFile).Should().BeTrue();
+            if (enableConflictingContentCopying)
+            {
+                File.ReadAllText(appSettingsFile).Should().NotContain(referencerName);
+                File.ReadAllText(releaseAppSettingsFile).Should().NotContain(referencerName);
+            }
+            else
+            {
+                File.ReadAllText(appSettingsFile).Should().Contain(referencerName);
+                File.ReadAllText(releaseAppSettingsFile).Should().Contain(referencerName);
             }
         }
 
