@@ -89,7 +89,8 @@ Copyright (c) .NET Foundation. All rights reserved.
       <AppHostRuntimeIdentifier Condition="'$(AppHostRuntimeIdentifier)' == ''">$(DefaultAppHostRuntimeIdentifier)</AppHostRuntimeIdentifier>
     </PropertyGroup>
 
-    <ResolveAppHosts TargetFrameworkIdentifier="$(TargetFrameworkIdentifier)"
+    <ResolveAppHosts Condition="'$(UseAppHost)' == 'true'"
+                     TargetFrameworkIdentifier="$(TargetFrameworkIdentifier)"
                      TargetFrameworkVersion="$(_TargetFrameworkVersionWithoutV)"
                      TargetingPackRoot="$(NetCoreTargetingPackRoot)"
                      AppHostRuntimeIdentifier="$(AppHostRuntimeIdentifier)"
