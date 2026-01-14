@@ -46,7 +46,7 @@ internal sealed class HotReloadHttpClient(string baseUrl, IHotReloadAgent agent,
         {
             if (e is not OperationCanceledException)
             {
-                log(e.Message);
+                log($"Connection failure: {e}");
             }
 
             _httpClient.Dispose();
@@ -75,7 +75,7 @@ internal sealed class HotReloadHttpClient(string baseUrl, IHotReloadAgent agent,
 
     private async Task InitializeAsync(CancellationToken cancellationToken)
     {
-        agent.Reporter.Report("Writing capabilities: " + agent.Capabilities, AgentMessageSeverity.Verbose);
+        log("Sending capabilities: " + agent.Capabilities);
 
         // Send capabilities to the server via POST to /connect
         var initPayload = new ClientInitializationResponse(agent.Capabilities);
@@ -84,10 +84,11 @@ internal sealed class HotReloadHttpClient(string baseUrl, IHotReloadAgent agent,
         connectStream.Position = 0;
 
         using var connectContent = new StreamContent(connectStream);
+        log($"POST connect ({connectStream.Length} bytes)");
         using var connectResponse = await _httpClient.PostAsync("connect", connectContent, cancellationToken);
         connectResponse.EnsureSuccessStatusCode();
 
-        log("Connected.");
+        log($"Connected (status {(int)connectResponse.StatusCode}).");
 
         // Apply updates made before this process was launched to avoid executing unupdated versions of the affected modules.
         await PollForUpdatesAsync(initialUpdates: true, cancellationToken);
@@ -101,12 +102,14 @@ internal sealed class HotReloadHttpClient(string baseUrl, IHotReloadAgent agent,
             {
                 // Poll for updates by sending a request to /poll
                 // The server will hold the connection open until there's an update to send
+                log(initialUpdates ? "GET poll (initial updates)" : "GET poll");
                 using var pollResponse = await _httpClient.GetAsync("poll", HttpCompletionOption.ResponseHeadersRead, cancellationToken);
                 pollResponse.EnsureSuccessStatusCode();
 
                 using var responseStream = await pollResponse.Content.ReadAsStreamAsync(cancellationToken);
 
                 var payloadType = (RequestType)await responseStream.ReadByteAsync(cancellationToken);
+                log($"Received {payloadType}");
                 switch (payloadType)
                 {
                     case RequestType.ManagedCodeUpdate:
@@ -136,6 +139,7 @@ internal sealed class HotReloadHttpClient(string baseUrl, IHotReloadAgent agent,
     private async ValueTask ReadAndApplyManagedCodeUpdateAsync(Stream requestStream, CancellationToken cancellationToken)
     {
         var request = await ManagedCodeUpdateRequest.ReadAsync(requestStream, cancellationToken);
+        log($"Applying {request.Updates.Count} managed code update(s)");
 
         bool success;
         try
@@ -158,6 +162,7 @@ internal sealed class HotReloadHttpClient(string baseUrl, IHotReloadAgent agent,
     private async ValueTask ReadAndApplyStaticAssetUpdateAsync(Stream requestStream, CancellationToken cancellationToken)
     {
         var request = await StaticAssetUpdateRequest.ReadAsync(requestStream, cancellationToken);
+        log($"Applying static asset update: {request.Update.RelativePath}");
 
         try
         {
@@ -188,6 +193,7 @@ internal sealed class HotReloadHttpClient(string baseUrl, IHotReloadAgent agent,
             await response.WriteAsync(responseStream, cancellationToken);
             responseStream.Position = 0;
 
+            log($"POST response ({response.Type}, {responseStream.Length} bytes)");
             using var content = new StreamContent(responseStream);
             using var httpResponse = await _httpClient.PostAsync("response", content, cancellationToken);
             httpResponse.EnsureSuccessStatusCode();

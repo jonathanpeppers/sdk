@@ -55,6 +55,24 @@ internal static class ProjectGraphUtilities
     public static bool IsMobilePlatform(this ProjectGraphNode projectNode)
     {
         var targetPlatformIdentifier = projectNode.ProjectInstance.GetPropertyValue(PropertyNames.TargetPlatformIdentifier);
+        
+        // If TargetPlatformIdentifier is not set, try to extract it from TargetFramework (e.g., "net10.0-android")
+        if (string.IsNullOrEmpty(targetPlatformIdentifier))
+        {
+            var targetFramework = projectNode.GetTargetFramework();
+            var dashIndex = targetFramework.IndexOf('-');
+            if (dashIndex > 0 && dashIndex < targetFramework.Length - 1)
+            {
+                targetPlatformIdentifier = targetFramework.Substring(dashIndex + 1);
+                // Handle cases like "net10.0-android35.0" - extract just the platform name
+                var dotIndex = targetPlatformIdentifier.IndexOfAny(['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']);
+                if (dotIndex > 0)
+                {
+                    targetPlatformIdentifier = targetPlatformIdentifier.Substring(0, dotIndex);
+                }
+            }
+        }
+        
         return targetPlatformIdentifier.Equals("Android", StringComparison.OrdinalIgnoreCase) ||
                targetPlatformIdentifier.Equals("iOS", StringComparison.OrdinalIgnoreCase);
     }

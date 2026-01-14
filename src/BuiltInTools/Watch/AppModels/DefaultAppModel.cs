@@ -16,9 +16,14 @@ internal sealed class DefaultAppModel(ProjectGraphNode project, int hotReloadHtt
     {
         HotReloadClient client;
 
+        var isMobile = project.IsMobilePlatform();
+        clientLogger.LogDebug("IsMobilePlatform={IsMobile}, TargetPlatformIdentifier={TargetPlatformIdentifier}",
+            isMobile,
+            project.ProjectInstance.GetPropertyValue(PropertyNames.TargetPlatformIdentifier));
+
         // Use HTTP transport for mobile platforms (Android, iOS, MacCatalyst)
         // Named pipes don't work over the network for remote device scenarios
-        if (project.IsMobilePlatform())
+        if (isMobile)
         {
             // For HTTP transport, the hot reload agent is built into the app via the platform workload,
             // so we don't pass the startup hook path.

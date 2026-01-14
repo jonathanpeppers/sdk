@@ -49,7 +49,8 @@ namespace Microsoft.DotNet.HotReload
         {
             _enableStaticAssetUpdates = enableStaticAssetUpdates;
             _port = port;
-            _serverUrl = $"http://+:{_port}/hotreload/";
+            // Use localhost - this must match what the Android workload writes to the environment file
+            _serverUrl = $"http://localhost:{_port}/hotreload/";
         }
 
         // for testing
@@ -91,10 +92,13 @@ namespace Microsoft.DotNet.HotReload
             try
             {
                 _httpListener.Start();
+                Logger.LogDebug("HTTP listener started successfully on {Url}, IsListening={IsListening}", _serverUrl, _httpListener.IsListening);
+                Console.WriteLine($"[HTTP DEBUG] HttpListener started on {_serverUrl}, IsListening={_httpListener.IsListening}");
             }
             catch (HttpListenerException ex)
             {
                 Logger.LogError("Failed to start HTTP listener on {Url}: {Message}", _serverUrl, ex.Message);
+                Console.WriteLine($"[HTTP DEBUG] HttpListener FAILED: {ex.Message}");
                 throw;
             }
 
@@ -107,9 +111,14 @@ namespace Microsoft.DotNet.HotReload
                 try
                 {
                     Logger.LogDebug("Waiting for application to connect to HTTP endpoint {Url}.", _serverUrl);
+                    Logger.LogDebug("HttpListener prefixes: {Prefixes}", string.Join(", ", _httpListener!.Prefixes));
+                    Console.WriteLine($"[HTTP DEBUG] Waiting for connection on {_serverUrl}...");
 
                     // Wait for the initial connection from the client
+                    Logger.LogDebug("Calling GetContextAsync()...");
                     var context = await _httpListener!.GetContextAsync().WaitAsync(cancellationToken);
+                    Console.WriteLine($"[HTTP DEBUG] GOT CONTEXT! {context.Request.HttpMethod} {context.Request.Url}");
+                    Logger.LogDebug("Received HTTP request: {Method} {Url}", context.Request.HttpMethod, context.Request.Url);
 
                     if (context.Request.Url?.AbsolutePath != "/hotreload/connect")
                     {
@@ -252,7 +261,7 @@ namespace Microsoft.DotNet.HotReload
             // For HTTP transport (mobile platforms), the hot reload agent is built into the app itself
             // via the platform workload, so we don't need to inject the startup hook.
             // Only set the HTTP endpoint for the app to connect to.
-            environmentBuilder[AgentEnvironmentVariables.DotNetWatchHotReloadHttpEndpoint] = $"http://localhost:{_port}/hotreload/";
+            environmentBuilder[AgentEnvironmentVariables.DotNetWatchHotReloadHttpEndpoint] = _serverUrl;
         }
 
         public override Task WaitForConnectionEstablishedAsync(CancellationToken cancellationToken)
