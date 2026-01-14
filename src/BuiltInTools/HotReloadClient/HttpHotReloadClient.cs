@@ -27,7 +27,6 @@ namespace Microsoft.DotNet.HotReload
     /// </summary>
     internal sealed class HttpHotReloadClient : HotReloadClient
     {
-        private readonly string _startupHookPath;
         private readonly bool _enableStaticAssetUpdates;
         private readonly int _port;
         private readonly string _serverUrl;
@@ -45,10 +44,9 @@ namespace Microsoft.DotNet.HotReload
         // The status of the last update response.
         private TaskCompletionSource<bool> _updateStatusSource = new();
 
-        public HttpHotReloadClient(ILogger logger, ILogger agentLogger, string startupHookPath, bool enableStaticAssetUpdates, int port)
+        public HttpHotReloadClient(ILogger logger, ILogger agentLogger, bool enableStaticAssetUpdates, int port)
             : base(logger, agentLogger)
         {
-            _startupHookPath = startupHookPath;
             _enableStaticAssetUpdates = enableStaticAssetUpdates;
             _port = port;
             _serverUrl = $"http://+:{_port}/hotreload/";
@@ -251,10 +249,9 @@ namespace Microsoft.DotNet.HotReload
         {
             environmentBuilder[AgentEnvironmentVariables.DotNetModifiableAssemblies] = "debug";
 
-            // HotReload startup hook should be loaded before any other startup hooks:
-            environmentBuilder.InsertListItem(AgentEnvironmentVariables.DotNetStartupHooks, _startupHookPath, Path.PathSeparator);
-
-            // Use the HTTP endpoint instead of named pipe
+            // For HTTP transport (mobile platforms), the hot reload agent is built into the app itself
+            // via the platform workload, so we don't need to inject the startup hook.
+            // Only set the HTTP endpoint for the app to connect to.
             environmentBuilder[AgentEnvironmentVariables.DotNetWatchHotReloadHttpEndpoint] = $"http://localhost:{_port}/hotreload/";
         }
 

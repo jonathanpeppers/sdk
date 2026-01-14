@@ -20,7 +20,9 @@ internal sealed class DefaultAppModel(ProjectGraphNode project, int hotReloadHtt
         // Named pipes don't work over the network for remote device scenarios
         if (project.IsMobilePlatform())
         {
-            client = new HttpHotReloadClient(clientLogger, agentLogger, GetStartupHookPath(project), enableStaticAssetUpdates: true, hotReloadHttpPort);
+            // For HTTP transport, the hot reload agent is built into the app via the platform workload,
+            // so we don't pass the startup hook path.
+            client = new HttpHotReloadClient(clientLogger, agentLogger, enableStaticAssetUpdates: true, hotReloadHttpPort);
         }
         else
         {
