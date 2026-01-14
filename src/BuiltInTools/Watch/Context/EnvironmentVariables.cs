@@ -15,6 +15,7 @@ internal static class EnvironmentVariables
         public const string DotnetLaunchProfile = "DOTNET_LAUNCH_PROFILE";
 
         public const string DotNetWatchHotReloadNamedPipeName = HotReload.AgentEnvironmentVariables.DotNetWatchHotReloadNamedPipeName;
+        public const string DotNetWatchHotReloadHttpEndpoint = HotReload.AgentEnvironmentVariables.DotNetWatchHotReloadHttpEndpoint;
         public const string DotNetStartupHooks = HotReload.AgentEnvironmentVariables.DotNetStartupHooks;
         public const string DotNetModifiableAssemblies = HotReload.AgentEnvironmentVariables.DotNetModifiableAssemblies;
         public const string HotReloadDeltaClientLogMessages = HotReload.AgentEnvironmentVariables.HotReloadDeltaClientLogMessages;

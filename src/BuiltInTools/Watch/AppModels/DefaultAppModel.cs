@@ -13,5 +13,20 @@ namespace Microsoft.DotNet.Watch;
 internal sealed class DefaultAppModel(ProjectGraphNode project) : HotReloadAppModel
 {
     public override ValueTask<HotReloadClients?> TryCreateClientsAsync(ILogger clientLogger, ILogger agentLogger, CancellationToken cancellationToken)
-        => new(new HotReloadClients(new DefaultHotReloadClient(clientLogger, agentLogger, GetStartupHookPath(project), enableStaticAssetUpdates: true), browserRefreshServer: null));
+    {
+        HotReloadClient client;
+
+        // Use HTTP transport for mobile platforms (Android, iOS, MacCatalyst)
+        // Named pipes don't work over the network for remote device scenarios
+        if (project.IsMobilePlatform())
+        {
+            client = new HttpHotReloadClient(clientLogger, agentLogger, GetStartupHookPath(project), enableStaticAssetUpdates: true);
+        }
+        else
+        {
+            client = new DefaultHotReloadClient(clientLogger, agentLogger, GetStartupHookPath(project), enableStaticAssetUpdates: true);
+        }
+
+        return new(new HotReloadClients(client, browserRefreshServer: null));
+    }
 }
