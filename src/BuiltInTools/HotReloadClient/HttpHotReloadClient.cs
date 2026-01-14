@@ -43,23 +43,13 @@ namespace Microsoft.DotNet.HotReload
         // The status of the last update response.
         private TaskCompletionSource<bool> _updateStatusSource = new();
 
-        public HttpHotReloadClient(ILogger logger, ILogger agentLogger, string startupHookPath, bool enableStaticAssetUpdates)
+        public HttpHotReloadClient(ILogger logger, ILogger agentLogger, string startupHookPath, bool enableStaticAssetUpdates, int port)
             : base(logger, agentLogger)
         {
             _startupHookPath = startupHookPath;
             _enableStaticAssetUpdates = enableStaticAssetUpdates;
-            _port = GetAvailablePort();
+            _port = port;
             _serverUrl = $"http://+:{_port}/hotreload/";
-        }
-
-        private static int GetAvailablePort()
-        {
-            // Find an available port by binding to port 0
-            using var listener = new System.Net.Sockets.TcpListener(IPAddress.Loopback, 0);
-            listener.Start();
-            var port = ((IPEndPoint)listener.LocalEndpoint).Port;
-            listener.Stop();
-            return port;
         }
 
         // for testing

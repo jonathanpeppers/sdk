@@ -22,6 +22,7 @@ internal static class PropertyNames
     public const string UsingMicrosoftNETSdkRazor = nameof(UsingMicrosoftNETSdkRazor);
     public const string DotNetWatchContentFiles = nameof(DotNetWatchContentFiles);
     public const string DotNetWatchBuild = nameof(DotNetWatchBuild);
+    public const string DotNetWatchHotReloadHttpPort = nameof(DotNetWatchHotReloadHttpPort);
     public const string DesignTimeBuild = nameof(DesignTimeBuild);
     public const string SkipCompilerExecution = nameof(SkipCompilerExecution);
     public const string ProvideCommandLineArgs = nameof(ProvideCommandLineArgs);

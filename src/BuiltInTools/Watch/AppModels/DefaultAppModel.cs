@@ -10,7 +10,7 @@ namespace Microsoft.DotNet.Watch;
 /// <summary>
 /// Default model.
 /// </summary>
-internal sealed class DefaultAppModel(ProjectGraphNode project) : HotReloadAppModel
+internal sealed class DefaultAppModel(ProjectGraphNode project, int hotReloadHttpPort) : HotReloadAppModel
 {
     public override ValueTask<HotReloadClients?> TryCreateClientsAsync(ILogger clientLogger, ILogger agentLogger, CancellationToken cancellationToken)
     {
@@ -20,7 +20,7 @@ internal sealed class DefaultAppModel(ProjectGraphNode project) : HotReloadAppMo
         // Named pipes don't work over the network for remote device scenarios
         if (project.IsMobilePlatform())
         {
-            client = new HttpHotReloadClient(clientLogger, agentLogger, GetStartupHookPath(project), enableStaticAssetUpdates: true);
+            client = new HttpHotReloadClient(clientLogger, agentLogger, GetStartupHookPath(project), enableStaticAssetUpdates: true, hotReloadHttpPort);
         }
         else
         {
