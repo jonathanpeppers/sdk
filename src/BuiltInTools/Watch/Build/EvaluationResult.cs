@@ -44,20 +44,9 @@ internal sealed class EvaluationResult(IReadOnlyDictionary<string, FileItem> fil
             .SetItem(PropertyNames.ProvideCommandLineArgs, "true")
             // HTTP port for hot reload on mobile platforms (Android, iOS, MacCatalyst):
             .SetItem(PropertyNames.DotNetWatchHotReloadHttpPort, environmentOptions.HotReloadHttpPort.ToString())
-            // Base directory containing hot reload startup hook assemblies (e.g., net6.0/Microsoft.Extensions.DotNetDeltaApplier.dll)
-            // Mobile workloads can use this to bundle the agent into the app.
-            .SetItem(PropertyNames.DotNetWatchHotReloadStartupHookDir, GetHotReloadStartupHookDir())
             // F# targets depend on host path variable:
             .SetItem("DOTNET_HOST_PATH", environmentOptions.MuxerPath);
     }
-
-    /// <summary>
-    /// Gets the base directory containing hot reload startup hook assemblies.
-    /// The directory contains subdirectories for each target framework (e.g., net6.0, net10.0)
-    /// with Microsoft.Extensions.DotNetDeltaApplier.dll in each.
-    /// </summary>
-    private static string GetHotReloadStartupHookDir()
-        => Path.Combine(Path.GetDirectoryName(typeof(EvaluationResult).Assembly.Location)!, "hotreload");
 
     /// <summary>
     /// Loads project graph and performs design-time build.
