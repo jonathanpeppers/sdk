@@ -24,11 +24,15 @@ internal sealed class HotReloadHttpClient(string baseUrl, IHotReloadAgent agent,
     /// </summary>
     private readonly SemaphoreSlim _messageToServerLock = new(initialCount: 1);
 
+    // Use infinite timeout for the HttpClient since polling can take arbitrarily long.
+    // The connectionTimeoutMS is used for the initial connect via CancellationToken.
     private readonly HttpClient _httpClient = new()
     {
         BaseAddress = new Uri(baseUrl),
-        Timeout = TimeSpan.FromMilliseconds(connectionTimeoutMS)
+        Timeout = Timeout.InfiniteTimeSpan
     };
+
+    private readonly int _connectionTimeoutMS = connectionTimeoutMS;
 
     public Task Listen(CancellationToken cancellationToken)
     {
@@ -77,15 +81,19 @@ internal sealed class HotReloadHttpClient(string baseUrl, IHotReloadAgent agent,
     {
         log("Sending capabilities: " + agent.Capabilities);
 
+        // Use a timeout for the initial connect request
+        using var connectCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        connectCts.CancelAfter(_connectionTimeoutMS);
+
         // Send capabilities to the server via POST to /connect
         var initPayload = new ClientInitializationResponse(agent.Capabilities);
         using var connectStream = new MemoryStream();
-        await initPayload.WriteAsync(connectStream, cancellationToken);
+        await initPayload.WriteAsync(connectStream, connectCts.Token);
         connectStream.Position = 0;
 
         using var connectContent = new StreamContent(connectStream);
         log($"POST connect ({connectStream.Length} bytes)");
-        using var connectResponse = await _httpClient.PostAsync("connect", connectContent, cancellationToken);
+        using var connectResponse = await _httpClient.PostAsync("connect", connectContent, connectCts.Token);
         connectResponse.EnsureSuccessStatusCode();
 
         log($"Connected (status {(int)connectResponse.StatusCode}).");
