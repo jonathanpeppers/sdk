@@ -16,7 +16,7 @@ namespace Microsoft.DotNet.HotReload;
 /// HTTP-based client for hot reload communication.
 /// Used for mobile platforms (Android, iOS, MacCatalyst) where named pipes don't work over the network.
 /// </summary>
-internal sealed class HttpClient(string baseUrl, IHotReloadAgent agent, Action<string> log, int connectionTimeoutMS = 5000)
+internal sealed class HotReloadHttpClient(string baseUrl, IHotReloadAgent agent, Action<string> log, int connectionTimeoutMS = 5000)
 {
     /// <summary>
     /// Messages to the server sent after the initial <see cref="ClientInitializationResponse"/> is sent
@@ -24,7 +24,7 @@ internal sealed class HttpClient(string baseUrl, IHotReloadAgent agent, Action<s
     /// </summary>
     private readonly SemaphoreSlim _messageToServerLock = new(initialCount: 1);
 
-    private readonly System.Net.Http.HttpClient _httpClient = new()
+    private readonly HttpClient _httpClient = new()
     {
         BaseAddress = new Uri(baseUrl),
         Timeout = TimeSpan.FromMilliseconds(connectionTimeoutMS)

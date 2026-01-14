@@ -63,7 +63,7 @@ internal sealed class StartupHook
     {
         RegisterSignalHandlers();
 
-        HttpClient? httpClient = null;
+        HotReloadHttpClient? httpClient = null;
 
         var agent = new HotReloadAgent(
             assemblyResolvingHandler: (_, args) =>
@@ -96,7 +96,7 @@ internal sealed class StartupHook
                 {
                     try
                     {
-                        await httpClient.SendResponseAsync(new HotReloadExceptionCreatedNotification(code, message), CancellationToken.None);
+                        await httpClient!.SendResponseAsync(new HotReloadExceptionCreatedNotification(code, message), CancellationToken.None);
                     }
                     catch
                     {
@@ -105,7 +105,7 @@ internal sealed class StartupHook
                 }
             });
 
-        httpClient = new HttpClient(s_httpEndpoint!, agent, Log);
+        httpClient = new HotReloadHttpClient(s_httpEndpoint!, agent, Log);
 
         // fire and forget:
         _ = httpClient.Listen(CancellationToken.None);
