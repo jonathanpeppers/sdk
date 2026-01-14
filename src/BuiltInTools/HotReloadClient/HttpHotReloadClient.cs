@@ -44,6 +44,9 @@ namespace Microsoft.DotNet.HotReload
         // The status of the last update response.
         private TaskCompletionSource<bool> _updateStatusSource = new();
 
+        // Signals when the first poll request has been received
+        private TaskCompletionSource _pollReceivedSource = new();
+
         public HttpHotReloadClient(ILogger logger, ILogger agentLogger, bool enableStaticAssetUpdates, int port)
             : base(logger, agentLogger)
         {
@@ -212,6 +215,9 @@ namespace Microsoft.DotNet.HotReload
                                 _currentContext = context;
                                 _currentRequestStream = context.Request.InputStream;
                                 _currentResponseStream = context.Response.OutputStream;
+
+                                // Signal that the poll request has been received
+                                _pollReceivedSource.TrySetResult();
                             }
                             finally
                             {
@@ -466,6 +472,12 @@ namespace Microsoft.DotNet.HotReload
 
             try
             {
+                // Wait for the poll request to arrive before sending InitialUpdatesCompleted
+                Logger.LogDebug("Waiting for poll request before sending InitialUpdatesCompleted...");
+                using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                timeoutCts.CancelAfter(TimeSpan.FromSeconds(30));
+                await _pollReceivedSource.Task.WaitAsync(timeoutCts.Token);
+
                 await _requestLock.WaitAsync(cancellationToken);
                 try
                 {
