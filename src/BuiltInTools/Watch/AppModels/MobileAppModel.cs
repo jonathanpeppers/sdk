@@ -21,6 +21,8 @@ internal sealed class MobileAppModel(DotNetWatchContext context, ProjectGraphNod
         // Deep copy so that we don't pollute the project graph:
         var instance = project.ProjectInstance.DeepCopy();
 
+        // Clear design-time build property since this is a real build target:
+        instance.RemoveProperty(PropertyNames.DesignTimeBuild);
         instance.SetProperty(PropertyNames.DotNetHotReloadAgentStartupHook, GetStartupHookPath(project));
 
         foreach (var (name, value) in environment)
