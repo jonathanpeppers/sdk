@@ -377,40 +377,62 @@ public class GivenDotnetRunSelectsDevice : SdkTest
             .And.HaveStdOutContaining($"RuntimeIdentifier: {rid}");
     }
 
-    [Fact]
-    public void ItPassesEnvironmentVariablesToTargets()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ItPassesEnvironmentVariablesToTargets(bool noBuild)
     {
-        var testInstance = _testAssetsManager.CopyTestAsset("DotnetRunDevices", identifier: "EnvVarTargets")
+        var testInstance = _testAssetsManager.CopyTestAsset("DotnetRunDevices", identifier: $"EnvVarTargets-noBuild{noBuild}")
             .WithSource();
 
         string deviceId = "test-device-1";
         string buildBinlogPath = Path.Combine(testInstance.Path, "msbuild.binlog");
         string runBinlogPath = Path.Combine(testInstance.Path, "msbuild-dotnet-run.binlog");
 
+        if (noBuild)
+        {
+            // First build the project with the device so build outputs exist
+            new DotnetCommand(Log, "build")
+                .WithWorkingDirectory(testInstance.Path)
+                .Execute("--framework", ToolsetInfo.CurrentTargetFramework, $"-p:Device={deviceId}")
+                .Should().Pass();
+        }
+
+        var args = new List<string> { "--framework", ToolsetInfo.CurrentTargetFramework, "--device", deviceId,
+                     "-e", "FOO=BAR", "-e", "ANOTHER=VALUE",
+                     "-bl" };
+        if (noBuild)
+        {
+            args.Add("--no-build");
+        }
+
         var result = new DotnetCommand(Log, "run")
             .WithWorkingDirectory(testInstance.Path)
-            .Execute("--framework", ToolsetInfo.CurrentTargetFramework, "--device", deviceId, 
-                     "-e", "FOO=BAR", "-e", "ANOTHER=VALUE",
-                     "-bl");
+            .Execute(args.ToArray());
 
         result.Should().Pass();
 
-        // Verify the binlog files were created
-        File.Exists(buildBinlogPath).Should().BeTrue("the build binlog file should be created");
+        // Run binlog should always be created
         File.Exists(runBinlogPath).Should().BeTrue("the run binlog file should be created");
 
-        // Verify environment variables were passed to Build target (out-of-process build)
-        AssertTargetInBinlog(buildBinlogPath, "_LogRuntimeEnvironmentVariableDuringBuild",
-            targets => 
-            {
-                targets.Should().NotBeEmpty("_LogRuntimeEnvironmentVariableDuringBuild target should have executed");
-                var messages = targets.First().FindChildrenRecursive<Message>();
-                var envVarMessage = messages.FirstOrDefault(m => m.Text?.Contains("Build: RuntimeEnvironmentVariable=") == true);
-                envVarMessage.Should().NotBeNull("the Build target should have logged the environment variables");
-                envVarMessage.Text.Should().Contain("FOO=BAR").And.Contain("ANOTHER=VALUE");
-            });
+        if (!noBuild)
+        {
+            // Verify the build binlog was created
+            File.Exists(buildBinlogPath).Should().BeTrue("the build binlog file should be created");
 
-        // Verify environment variables were passed to ComputeRunArguments target (in-process)
+            // Verify environment variables were passed to Build target (out-of-process build)
+            AssertTargetInBinlog(buildBinlogPath, "_LogRuntimeEnvironmentVariableDuringBuild",
+                targets => 
+                {
+                    targets.Should().NotBeEmpty("_LogRuntimeEnvironmentVariableDuringBuild target should have executed");
+                    var messages = targets.First().FindChildrenRecursive<Message>();
+                    var envVarMessage = messages.FirstOrDefault(m => m.Text?.Contains("Build: RuntimeEnvironmentVariable=") == true);
+                    envVarMessage.Should().NotBeNull("the Build target should have logged the environment variables");
+                    envVarMessage.Text.Should().Contain("FOO=BAR").And.Contain("ANOTHER=VALUE");
+                });
+        }
+
+        // Verify environment variables were passed to ComputeRunArguments target (in-process) - runs even with --no-build
         AssertTargetInBinlog(runBinlogPath, "_LogRuntimeEnvironmentVariableDuringComputeRunArguments",
             targets => 
             {
@@ -421,7 +443,7 @@ public class GivenDotnetRunSelectsDevice : SdkTest
                 envVarMessage.Text.Should().Contain("FOO=BAR").And.Contain("ANOTHER=VALUE");
             });
 
-        // Verify environment variables were passed to DeployToDevice target (in-process)
+        // Verify environment variables were passed to DeployToDevice target (in-process) - runs even with --no-build
         AssertTargetInBinlog(runBinlogPath, "DeployToDevice",
             targets => 
             {
@@ -432,13 +454,16 @@ public class GivenDotnetRunSelectsDevice : SdkTest
                 envVarMessage.Text.Should().Contain("FOO=BAR").And.Contain("ANOTHER=VALUE");
             });
 
-        // Verify the props file was created in the correct IntermediateOutputPath location
-        string tempPropsFile = Path.Combine(testInstance.Path, "obj", "Debug", ToolsetInfo.CurrentTargetFramework, "dotnet-run-env.props");
-        var build = BinaryLog.ReadBuild(buildBinlogPath);
-        var propsFile = build.SourceFiles?.FirstOrDefault(f => f.FullPath.EndsWith("dotnet-run-env.props", StringComparison.OrdinalIgnoreCase));
-        propsFile.Should().NotBeNull("dotnet-run-env.props should be embedded in the binlog");
-        propsFile.FullPath.Should().Be(tempPropsFile, "the props file should be in the IntermediateOutputPath");
-        File.Exists(tempPropsFile).Should().BeFalse("the temporary props file should be deleted after build");
+        if (!noBuild)
+        {
+            // Verify the props file was created in the correct IntermediateOutputPath location
+            string tempPropsFile = Path.Combine(testInstance.Path, "obj", "Debug", ToolsetInfo.CurrentTargetFramework, "dotnet-run-env.props");
+            var build = BinaryLog.ReadBuild(buildBinlogPath);
+            var propsFile = build.SourceFiles?.FirstOrDefault(f => f.FullPath.EndsWith("dotnet-run-env.props", StringComparison.OrdinalIgnoreCase));
+            propsFile.Should().NotBeNull("dotnet-run-env.props should be embedded in the binlog");
+            propsFile.FullPath.Should().Be(tempPropsFile, "the props file should be in the IntermediateOutputPath");
+            File.Exists(tempPropsFile).Should().BeFalse("the temporary props file should be deleted after build");
+        }
     }
 
     [Fact]
