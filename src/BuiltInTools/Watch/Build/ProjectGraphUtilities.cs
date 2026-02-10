@@ -56,11 +56,9 @@ internal static class ProjectGraphUtilities
     /// These platforms require HTTP transport for hot reload instead of named pipes.
     /// </summary>
     public static bool IsMobilePlatform(this ProjectGraphNode projectNode)
-    {
-        var targetPlatformIdentifier = projectNode.ProjectInstance.GetPropertyValue(PropertyNames.TargetPlatformIdentifier);
-        return targetPlatformIdentifier.Equals("Android", StringComparison.OrdinalIgnoreCase) ||
-               targetPlatformIdentifier.Equals("iOS", StringComparison.OrdinalIgnoreCase);
-    }
+        => projectNode.GetCapabilities().Any(static value =>
+            value.Equals(ProjectCapability.Android, StringComparison.OrdinalIgnoreCase) ||
+            value.Equals(ProjectCapability.iOS, StringComparison.OrdinalIgnoreCase));
 
     public static string? GetOutputDirectory(this ProjectGraphNode projectNode)
         => projectNode.ProjectInstance.GetPropertyValue(PropertyNames.TargetPath) is { Length: >0 } path ? Path.GetDirectoryName(Path.Combine(projectNode.ProjectInstance.Directory, path)) : null;

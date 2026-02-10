@@ -8,7 +8,6 @@ internal static class PropertyNames
     public const string TargetFramework = nameof(TargetFramework);
     public const string TargetFrameworkIdentifier = nameof(TargetFrameworkIdentifier);
     public const string TargetFrameworkMoniker = nameof(TargetFrameworkMoniker);
-    public const string TargetPlatformIdentifier = nameof(TargetPlatformIdentifier);
     public const string TargetPath = nameof(TargetPath);
     public const string EnableDefaultItems = nameof(EnableDefaultItems);
     public const string TargetFrameworks = nameof(TargetFrameworks);
@@ -57,7 +56,9 @@ internal static class TargetNames
 
 internal static class ProjectCapability
 {
+    public const string Android = nameof(Android);
     public const string Aspire = nameof(Aspire);
     public const string AspNetCore = nameof(AspNetCore);
+    public const string iOS = nameof(iOS);
     public const string WebAssembly = nameof(WebAssembly);
 }
