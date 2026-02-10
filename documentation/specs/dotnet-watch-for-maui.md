@@ -18,6 +18,23 @@ This spec describes how `dotnet watch` provides Hot Reload for mobile platforms 
 
 ## SDK Changes ([dotnet/sdk#52581](https://github.com/dotnet/sdk/pull/52581))
 
+### WebSocket Details
+
+`dotnet-watch` already has a WebSocket server for web apps: `BrowserRefreshServer`. This server:
+
+- Hosts via Kestrel on `https://localhost:<port>`
+- Communicates with JavaScript (`aspnetcore-browser-refresh.js`) injected into web pages
+- Sends commands like "refresh CSS", "reload page", "apply Blazor delta"
+
+For mobile, we reuse the Kestrel infrastructure but with a different protocol:
+
+| Server                     | Client                 | Protocol                                   |
+|----------------------------|------------------------|--------------------------------------------|
+| `BrowserRefreshServer`     | JavaScript in browser  | JSON messages for CSS/page refresh         |
+| `HotReloadWebSocketServer` | Startup hook on device | Binary delta payloads (same as named pipe) |
+
+The mobile server (`HotReloadWebSocketServer`) extends `KestrelWebSocketServer` and speaks the same binary protocol as the named pipe transport, just over WebSocket instead.
+
 ### 1. Mobile Detection
 
 [ProjectGraphUtilities.cs](../../src/BuiltInTools/Watch/Build/ProjectGraphUtilities.cs) checks for `Android` or `iOS` capabilities (case-insensitive).
