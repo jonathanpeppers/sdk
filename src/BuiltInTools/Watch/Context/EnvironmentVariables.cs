@@ -63,8 +63,8 @@ internal static class EnvironmentVariables
     public static string? BrowserPath => Environment.GetEnvironmentVariable("DOTNET_WATCH_BROWSER_PATH");
 
     /// <summary>
-    /// Port for HTTP hot reload communication. Used for mobile platforms (Android, iOS).
-    /// Defaults to 0 (auto-assign a random available port) if not specified.
+    /// Port for HTTP hot reload communication. Used for projects with the HotReloadWebSockets capability.
+    /// Mobile workloads (Android, iOS) add this capability. Defaults to 0 (auto-assign) if not specified.
     /// </summary>
     public static int HotReloadHttpPort => ReadInt(Names.DotNetWatchHotReloadHttpPort) ?? 0;
 

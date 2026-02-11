@@ -55,9 +55,8 @@ internal static class TargetNames
 
 internal static class ProjectCapability
 {
-    public const string Android = nameof(Android);
     public const string Aspire = nameof(Aspire);
     public const string AspNetCore = nameof(AspNetCore);
-    public const string iOS = nameof(iOS);
+    public const string HotReloadWebSockets = nameof(HotReloadWebSockets);
     public const string WebAssembly = nameof(WebAssembly);
 }

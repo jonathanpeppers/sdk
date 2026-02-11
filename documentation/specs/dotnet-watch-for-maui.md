@@ -11,10 +11,13 @@ This spec describes how `dotnet watch` provides Hot Reload for mobile platforms 
 | Desktop/Console | Named Pipe | Existing implementation, Fast, local IPC                                      |
 | Android/iOS     | WebSocket  | Named pipes don't work over the network; `adb reverse` tunnels the connection |
 
-`dotnet-watch` detects mobile via `@(ProjectCapability)` items:
+`dotnet-watch` detects WebSocket transport via the `HotReloadWebSockets` capability:
 
-- `<ProjectCapability Include="Android" />`
-- `<ProjectCapability Include="iOS" />`
+```xml
+<ProjectCapability Include="HotReloadWebSockets" />
+```
+
+Mobile workloads (Android, iOS) add this capability to their SDK targets. This allows any workload to opt into WebSocket-based hot reload.
 
 ## SDK Changes ([dotnet/sdk#52581](https://github.com/dotnet/sdk/pull/52581))
 
@@ -35,9 +38,9 @@ For mobile, we reuse the Kestrel infrastructure but with a different protocol:
 
 The mobile server (`HotReloadWebSocketServer`) extends `KestrelWebSocketServer` and speaks the same binary protocol as the named pipe transport, just over WebSocket instead.
 
-### 1. Mobile Detection
+### 1. WebSocket Capability Detection
 
-[ProjectGraphUtilities.cs](../../src/BuiltInTools/Watch/Build/ProjectGraphUtilities.cs) checks for `Android` or `iOS` capabilities (case-insensitive).
+[ProjectGraphUtilities.cs](../../src/BuiltInTools/Watch/Build/ProjectGraphUtilities.cs) checks for the `HotReloadWebSockets` capability (case-insensitive).
 
 ### 2. MobileAppModel
 
@@ -66,6 +69,7 @@ These environment variables are passed as `@(RuntimeEnvironmentVariable)` MSBuil
 Enables the Android workload to receive env vars from `dotnet run -e`:
 
 - Adds `<ProjectCapability Include="RuntimeEnvironmentVariableSupport" />`
+- Adds `<ProjectCapability Include="HotReloadWebSockets" />` to opt into WebSocket-based hot reload
 - Configures `@(RuntimeEnvironmentVariable)` items, so they will apply to Android.
 
 ### [dotnet/android#10778](https://github.com/dotnet/android/pull/10778) — dotnet-watch Integration
@@ -76,7 +80,7 @@ Enables the Android workload to receive env vars from `dotnet run -e`:
 
 ## Data Flow
 
-1. **Build:** `dotnet-watch` builds the project, detects `Android` capability
+1. **Build:** `dotnet-watch` builds the project, detects `HotReloadWebSockets` capability
 2. **Launch:** `dotnet run -e DOTNET_WATCH_HOTRELOAD_WEBSOCKET_ENDPOINT=ws://127.0.0.1:<port> -e DOTNET_STARTUP_HOOKS=...`
 3. **Workload:** Android build tasks:
    - Include the startup hook DLL in the APK
@@ -87,7 +91,10 @@ Enables the Android workload to receive env vars from `dotnet run -e`:
 
 ## iOS
 
-Similar changes will be made in the iOS workload to apply to that platform. They will be similar in implementation and scope.
+Similar changes will be made in the iOS workload to opt into WebSocket-based hot reload:
+
+- Add `<ProjectCapability Include="HotReloadWebSockets" />`
+- Handle startup hooks and port forwarding similar to Android
 
 ## Dependencies
 

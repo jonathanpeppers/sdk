@@ -23,7 +23,8 @@ namespace Microsoft.DotNet.HotReload;
 
 /// <summary>
 /// Hot reload client that uses WebSocket instead of named pipes.
-/// Used for mobile platforms (Android, iOS) where named pipes don't work over the network.
+/// Used for projects with the HotReloadWebSockets capability (e.g., Android, iOS).
+/// Mobile workloads add this capability since named pipes don't work over the network.
 /// 
 /// Server-side implementation using Kestrel + WebSockets, extends KestrelWebSocketServer.
 /// </summary>

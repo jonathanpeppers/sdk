@@ -11,11 +11,11 @@ public class MobileHotReloadTests(ITestOutputHelper logger) : DotNetWatchTestBas
     private static readonly Regex WebSocketServerStartedPattern = new(@"WebSocket server started at: ws://127\.0\.0\.1:([1-9]\d*)");
 
     /// <summary>
-    /// Tests that hot reload works for projects with the Android ProjectCapability.
-    /// These projects use WebSocket transport instead of named pipes.
+    /// Tests that hot reload works for projects with the HotReloadWebSockets capability.
+    /// Mobile workloads (Android, iOS) add this capability to indicate WebSocket transport should be used.
     /// </summary>
     [Fact]
-    public async Task HotReload_WithAndroidCapability()
+    public async Task HotReload_WithWebSocketCapability()
     {
         var testAsset = TestAssets.CopyTestAsset("WatchMobileApp")
             .WithSource();
@@ -25,42 +25,7 @@ public class MobileHotReloadTests(ITestOutputHelper logger) : DotNetWatchTestBas
         await App.WaitForOutputLineContaining("Started");
         await App.WaitForOutputLineContaining(MessageDescriptor.WaitingForChanges);
 
-        // Verify the app is detected as mobile and uses WebSocket transport with a dynamically assigned port
-        App.AssertOutputContains(MessageDescriptor.ApplicationKind_Mobile);
-        App.AssertOutputContains(WebSocketServerStartedPattern);
-        App.AssertOutputContains("WebSocket client connected");
-
-        // Apply a hot reload change
-        var programPath = Path.Combine(testAsset.Path, "Program.cs");
-        UpdateSourceFile(programPath, src => src.Replace(
-            """Console.WriteLine(".");""",
-            """Console.WriteLine("Changed!");"""));
-
-        await App.AssertOutputLineStartsWith("Changed!");
-    }
-
-    /// <summary>
-    /// Tests that hot reload works for projects with the iOS ProjectCapability.
-    /// </summary>
-    [Fact]
-    public async Task HotReload_WithiOSCapability()
-    {
-        var testAsset = TestAssets.CopyTestAsset("WatchMobileApp")
-            .WithSource()
-            .WithProjectChanges(project =>
-            {
-                // Change Android to iOS capability
-                var capability = project.Root!.Descendants()
-                    .First(e => e.Name.LocalName == "ProjectCapability" && e.Attribute("Include")?.Value == "Android");
-                capability.SetAttributeValue("Include", "iOS");
-            });
-
-        App.Start(testAsset, []);
-
-        await App.WaitForOutputLineContaining("Started");
-        await App.WaitForOutputLineContaining(MessageDescriptor.WaitingForChanges);
-
-        // Verify the app is detected as mobile and uses WebSocket transport with a dynamically assigned port
+        // Verify the app is detected as requiring WebSocket transport with a dynamically assigned port
         App.AssertOutputContains(MessageDescriptor.ApplicationKind_Mobile);
         App.AssertOutputContains(WebSocketServerStartedPattern);
         App.AssertOutputContains("WebSocket client connected");

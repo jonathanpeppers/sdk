@@ -5,8 +5,8 @@
     <!-- properties placeholder -->
   </PropertyGroup>
   <ItemGroup>
-    <!-- This simulates an Android project that would have this capability set -->
-    <ProjectCapability Include="Android" />
+    <!-- This simulates a mobile project that would have this capability set by the workload -->
+    <ProjectCapability Include="HotReloadWebSockets" />
     <!-- items placeholder -->
   </ItemGroup>
 </Project>
