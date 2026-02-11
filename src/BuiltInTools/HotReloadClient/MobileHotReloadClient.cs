@@ -29,7 +29,7 @@ namespace Microsoft.DotNet.HotReload;
 /// </summary>
 internal sealed class MobileHotReloadClient : HotReloadClient
 {
-    private readonly int _port;
+    private readonly int _requestedPort;
     private readonly string? _startupHookPath;
     private readonly HotReloadWebSocketServer _server;
 
@@ -39,13 +39,13 @@ internal sealed class MobileHotReloadClient : HotReloadClient
     public MobileHotReloadClient(ILogger logger, ILogger agentLogger, int port, string? startupHookPath = null)
         : base(logger, agentLogger)
     {
-        _port = port;
+        _requestedPort = port;
         _startupHookPath = startupHookPath;
         _server = new HotReloadWebSocketServer(logger);
     }
 
     // for testing
-    internal int Port => _port;
+    internal int Port => _server.BoundPort;
 
     public override void Dispose()
     {
@@ -54,10 +54,14 @@ internal sealed class MobileHotReloadClient : HotReloadClient
 
     public override void ConfigureLaunchEnvironment(IDictionary<string, string> environmentBuilder)
     {
+        // Start the server now so we know the actual bound port (when using port 0 for auto-assign)
+        EnsureServerStarted();
+
         environmentBuilder[AgentEnvironmentVariables.DotNetModifiableAssemblies] = "debug";
 
         // Set the WebSocket endpoint for the app to connect to.
-        environmentBuilder[AgentEnvironmentVariables.DotNetWatchHotReloadWebSocketEndpoint] = $"ws://localhost:{_port}";
+        // Use the actual bound URL from the server (important when port 0 was requested).
+        environmentBuilder[AgentEnvironmentVariables.DotNetWatchHotReloadWebSocketEndpoint] = _server.WebSocketUrl;
 
         // Pass the startup hook path as an environment variable so the workload can deploy it.
         // This gets passed via `dotnet run -e` and becomes available as @(RuntimeEnvironmentVariable)
@@ -68,10 +72,23 @@ internal sealed class MobileHotReloadClient : HotReloadClient
         }
     }
 
+    private void EnsureServerStarted()
+    {
+        if (_server.IsStarted)
+        {
+            return;
+        }
+
+        // Start Kestrel server with WebSocket support.
+        // Use 127.0.0.1 instead of "localhost" because Kestrel doesn't support dynamic port binding with "localhost".
+        // System.InvalidOperationException: Dynamic port binding is not supported when binding to localhost. You must either bind to 127.0.0.1:0 or [::1]:0, or both.
+        _server.StartServerAsync("127.0.0.1", _requestedPort, CancellationToken.None).AsTask().GetAwaiter().GetResult();
+    }
+
     public override void InitiateConnection(CancellationToken cancellationToken)
     {
-        // Start Kestrel server with WebSocket support
-        _server.StartServerAsync("localhost", _port, cancellationToken).AsTask().GetAwaiter().GetResult();
+        // Server should already be started by ConfigureLaunchEnvironment, but ensure it's started
+        EnsureServerStarted();
 
         // Wait for connection asynchronously
         _capabilitiesTask = WaitForCapabilitiesAsync(cancellationToken);
@@ -307,6 +324,22 @@ internal sealed class MobileHotReloadClient : HotReloadClient
         public HotReloadWebSocketServer(ILogger logger) : base(logger)
         {
         }
+
+        /// <summary>
+        /// Returns true if the server has been started.
+        /// </summary>
+        public bool IsStarted => Host != null;
+
+        /// <summary>
+        /// Gets the first bound WebSocket URL (e.g., "ws://127.0.0.1:12345").
+        /// Only valid after server has started.
+        /// </summary>
+        public string WebSocketUrl => ServerUrls.FirstOrDefault() ?? throw new InvalidOperationException("Server not started");
+
+        /// <summary>
+        /// Gets the bound port number. Only valid after server has started.
+        /// </summary>
+        public int BoundPort => new Uri(WebSocketUrl).Port;
 
         public async ValueTask StartServerAsync(string hostName, int port, CancellationToken cancellationToken)
         {

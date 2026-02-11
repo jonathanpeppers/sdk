@@ -1,10 +1,15 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Text.RegularExpressions;
+
 namespace Microsoft.DotNet.Watch.UnitTests;
 
 public class MobileHotReloadTests(ITestOutputHelper logger) : DotNetWatchTestBase(logger)
 {
+    // Matches WebSocket URLs like ws://127.0.0.1:12345 where port is non-zero
+    private static readonly Regex WebSocketServerStartedPattern = new(@"WebSocket server started at: ws://127\.0\.0\.1:([1-9]\d*)");
+
     /// <summary>
     /// Tests that hot reload works for projects with the Android ProjectCapability.
     /// These projects use WebSocket transport instead of named pipes.
@@ -20,9 +25,9 @@ public class MobileHotReloadTests(ITestOutputHelper logger) : DotNetWatchTestBas
         await App.WaitForOutputLineContaining("Started");
         await App.WaitForOutputLineContaining(MessageDescriptor.WaitingForChanges);
 
-        // Verify the app is detected as mobile and uses WebSocket transport
+        // Verify the app is detected as mobile and uses WebSocket transport with a dynamically assigned port
         App.AssertOutputContains(MessageDescriptor.ApplicationKind_Mobile);
-        App.AssertOutputContains("WebSocket server started at:");
+        App.AssertOutputContains(WebSocketServerStartedPattern);
         App.AssertOutputContains("WebSocket client connected");
 
         // Apply a hot reload change
@@ -55,9 +60,9 @@ public class MobileHotReloadTests(ITestOutputHelper logger) : DotNetWatchTestBas
         await App.WaitForOutputLineContaining("Started");
         await App.WaitForOutputLineContaining(MessageDescriptor.WaitingForChanges);
 
-        // Verify the app is detected as mobile and uses WebSocket transport
+        // Verify the app is detected as mobile and uses WebSocket transport with a dynamically assigned port
         App.AssertOutputContains(MessageDescriptor.ApplicationKind_Mobile);
-        App.AssertOutputContains("WebSocket server started at:");
+        App.AssertOutputContains(WebSocketServerStartedPattern);
         App.AssertOutputContains("WebSocket client connected");
 
         // Apply a hot reload change

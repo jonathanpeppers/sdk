@@ -51,9 +51,11 @@ Creates a `MobileHotReloadClient` with a WebSocket server instead of named pipes
 dotnet run --no-build \
   -e DOTNET_WATCH=1 \
   -e DOTNET_MODIFIABLE_ASSEMBLIES=debug \
-  -e DOTNET_WATCH_HOTRELOAD_WEBSOCKET_ENDPOINT=ws://localhost:9000 \
+  -e DOTNET_WATCH_HOTRELOAD_WEBSOCKET_ENDPOINT=ws://127.0.0.1:<port> \
   -e DOTNET_STARTUP_HOOKS=<path to DeltaApplier.dll>
 ```
+
+The port is dynamically assigned (defaults to 0, meaning the OS picks an available port) to avoid conflicts in CI and parallel test scenarios. The `DOTNET_WATCH_HOTRELOAD_HTTP_PORT` environment variable can override this if a specific port is needed.
 
 These environment variables are passed as `@(RuntimeEnvironmentVariable)` MSBuild items to the workload. See [dotnet-run-for-maui.md](dotnet-run-for-maui.md) for details on `dotnet run` and environment variables.
 
@@ -69,18 +71,18 @@ Enables the Android workload to receive env vars from `dotnet run -e`:
 ### [dotnet/android#10778](https://github.com/dotnet/android/pull/10778) — dotnet-watch Integration
 
 1. **Startup Hook:** Parses `DOTNET_STARTUP_HOOKS`, includes the assembly in the app package, rewrites the path to just the assembly name (since the full path doesn't exist on device)
-2. **Port Forwarding:** Runs `adb reverse tcp:9000 tcp:9000` so the device can reach the host's WebSocket server via `localhost:9000`
+2. **Port Forwarding:** Runs `adb reverse tcp:<port> tcp:<port>` so the device can reach the host's WebSocket server via `127.0.0.1:<port>` (port is parsed from the endpoint URL)
 3. **Prevents Double Connection:** Disables startup hooks in `Microsoft.Android.Run` (the desktop launcher) so only the mobile app connects
 
 ## Data Flow
 
 1. **Build:** `dotnet-watch` builds the project, detects `Android` capability
-2. **Launch:** `dotnet run -e DOTNET_WATCH_HOTRELOAD_WEBSOCKET_ENDPOINT=ws://localhost:9000 -e DOTNET_STARTUP_HOOKS=...`
+2. **Launch:** `dotnet run -e DOTNET_WATCH_HOTRELOAD_WEBSOCKET_ENDPOINT=ws://127.0.0.1:<port> -e DOTNET_STARTUP_HOOKS=...`
 3. **Workload:** Android build tasks:
    - Include the startup hook DLL in the APK
-   - Set up ADB port forwarding
+   - Set up ADB port forwarding for the dynamically assigned port
    - Rewrite env vars for on-device paths
-4. **Device:** App starts → StartupHook loads → `Transport.TryCreate()` reads env vars → `WebSocketTransport` connects to `ws://localhost:9000`
+4. **Device:** App starts → StartupHook loads → `Transport.TryCreate()` reads env vars → `WebSocketTransport` connects to `ws://127.0.0.1:<port>`
 5. **Hot Reload:** File change → delta compiled → sent over WebSocket → applied on device
 
 ## iOS

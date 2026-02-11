@@ -64,9 +64,9 @@ internal static class EnvironmentVariables
 
     /// <summary>
     /// Port for HTTP hot reload communication. Used for mobile platforms (Android, iOS).
-    /// Defaults to 9000 if not specified.
+    /// Defaults to 0 (auto-assign a random available port) if not specified.
     /// </summary>
-    public static int HotReloadHttpPort => ReadInt(Names.DotNetWatchHotReloadHttpPort) ?? 9000;
+    public static int HotReloadHttpPort => ReadInt(Names.DotNetWatchHotReloadHttpPort) ?? 0;
 
     private static bool ReadBool(string variableName)
         => ParseBool(Environment.GetEnvironmentVariable(variableName));
