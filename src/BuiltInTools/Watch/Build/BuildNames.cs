@@ -40,7 +40,6 @@ internal static class MetadataNames
     public const string TargetPath = nameof(TargetPath);
     public const string AssetFile = nameof(AssetFile);
     public const string EndpointProperties = nameof(EndpointProperties);
-    public const string Value = nameof(Value);
 }
 
 internal static class TargetNames

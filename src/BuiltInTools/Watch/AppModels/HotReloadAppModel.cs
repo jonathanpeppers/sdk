@@ -11,12 +11,6 @@ internal abstract partial class HotReloadAppModel()
 {
     public abstract ValueTask<HotReloadClients?> TryCreateClientsAsync(ILogger clientLogger, ILogger agentLogger, CancellationToken cancellationToken);
 
-    /// <summary>
-    /// Performs any steps necessary to deploy the agent into the target process.
-    /// </summary>
-    public virtual ValueTask<bool> DeployAgent(ILogger clientLogger, IReadOnlyDictionary<string, string> environment)
-        => new(true);
-
     protected static string GetInjectedAssemblyPath(string targetFramework, string assemblyName)
         => Path.Combine(Path.GetDirectoryName(typeof(HotReloadAppModel).Assembly.Location)!, "hotreload", targetFramework, assemblyName + ".dll");
 

@@ -99,12 +99,6 @@ internal sealed class ProjectLauncher(
 
         clients.ConfigureLaunchEnvironment(environmentBuilder);
 
-        if (!await appModel.DeployAgent(clientLogger, environmentBuilder))
-        {
-            // error already reported
-            return null;
-        }
-
         processSpec.Arguments = GetProcessArguments(projectOptions, environmentBuilder);
 
         // Attach trigger to the process that detects when the web server reports to the output that it's listening.
