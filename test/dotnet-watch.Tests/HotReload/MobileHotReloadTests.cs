@@ -20,8 +20,10 @@ public class MobileHotReloadTests(ITestOutputHelper logger) : DotNetWatchTestBas
         await App.WaitForOutputLineContaining("Started");
         await App.WaitForOutputLineContaining(MessageDescriptor.WaitingForChanges);
 
-        // Verify the app is detected as mobile (uses WebSocket transport)
+        // Verify the app is detected as mobile and uses WebSocket transport
         App.AssertOutputContains(MessageDescriptor.ApplicationKind_Mobile);
+        App.AssertOutputContains("WebSocket server started at:");
+        App.AssertOutputContains("WebSocket client connected");
 
         // Apply a hot reload change
         var programPath = Path.Combine(testAsset.Path, "Program.cs");
@@ -53,8 +55,10 @@ public class MobileHotReloadTests(ITestOutputHelper logger) : DotNetWatchTestBas
         await App.WaitForOutputLineContaining("Started");
         await App.WaitForOutputLineContaining(MessageDescriptor.WaitingForChanges);
 
-        // Verify the app is detected as mobile
+        // Verify the app is detected as mobile and uses WebSocket transport
         App.AssertOutputContains(MessageDescriptor.ApplicationKind_Mobile);
+        App.AssertOutputContains("WebSocket server started at:");
+        App.AssertOutputContains("WebSocket client connected");
 
         // Apply a hot reload change
         var programPath = Path.Combine(testAsset.Path, "Program.cs");
