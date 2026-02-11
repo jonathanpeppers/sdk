@@ -32,7 +32,14 @@ public class HotReloadClientTests(ITestOutputHelper output)
         public async ValueTask DisposeAsync()
         {
             _cancellationSource.Cancel();
-            await await _listenerTaskFactory;
+            try
+            {
+                await await _listenerTaskFactory;
+            }
+            catch (OperationCanceledException)
+            {
+                // Expected when cancellation is requested during disposal
+            }
 
             Client.Dispose();
         }
