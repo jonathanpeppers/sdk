@@ -44,7 +44,7 @@ internal abstract partial class HotReloadAppModel()
 
         if (projectNode.UsesWebSocketHotReload())
         {
-            context.Logger.Log(MessageDescriptor.ApplicationKind_Mobile);
+            context.Logger.Log(MessageDescriptor.ApplicationKind_WebSockets);
             return new MobileAppModel(context, projectNode);
         }
 
