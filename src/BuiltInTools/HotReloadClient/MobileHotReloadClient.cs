@@ -100,8 +100,7 @@ internal sealed class MobileHotReloadClient : HotReloadClient
         try
         {
             // Wait for the client to connect
-            var socket = await _server.WaitForConnectionAsync(cancellationToken);
-            if (socket == null)
+            if (await _server.WaitForConnectionAsync(cancellationToken) == null)
             {
                 return [];
             }
@@ -360,11 +359,14 @@ internal sealed class MobileHotReloadClient : HotReloadClient
             _clientSocket = webSocket;
             _clientConnectedSource.TrySetResult(webSocket);
 
-            // Keep the connection alive until it's closed
-            // The actual message handling is done via ReceiveMessageAsync
-            while (webSocket.State == WebSocketState.Open)
+            // Keep the request alive until the connection is closed or aborted
+            try
             {
-                await Task.Delay(100);
+                await Task.Delay(Timeout.InfiniteTimeSpan, context.RequestAborted);
+            }
+            catch (OperationCanceledException) when (context.RequestAborted.IsCancellationRequested)
+            {
+                // Expected when the client disconnects or the request is aborted
             }
 
             Logger.LogDebug("WebSocket client disconnected");
